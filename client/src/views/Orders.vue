@@ -8,6 +8,53 @@
     <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
+      <div class="card submitted-orders-card">
+        <div class="card-header">
+          <h3 class="card-title">Submitted Orders ({{ submittedOrders.length }})</h3>
+        </div>
+        <p v-if="submittedOrdersLoading" class="submitted-orders-message">Loading submitted orders...</p>
+        <p v-else-if="submittedOrdersError" class="submitted-orders-message error-text" role="alert">
+          {{ submittedOrdersError }}
+        </p>
+        <div v-else-if="submittedOrders.length === 0" class="submitted-orders-message">
+          No restocking orders submitted this session.
+        </div>
+        <div v-else class="table-container">
+          <table class="submitted-orders-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Submitted</th>
+                <th>Items</th>
+                <th>Order total</th>
+                <th>Delivery lead time</th>
+                <th>Expected delivery</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in submittedOrders" :key="order.id">
+                <td><strong>{{ order.id.slice(0, 8) }}</strong></td>
+                <td>{{ formatDate(order.submitted_at) }}</td>
+                <td>
+                  <details class="items-details">
+                    <summary class="items-summary">{{ order.items.length }} item{{ order.items.length === 1 ? '' : 's' }}</summary>
+                    <div class="items-dropdown">
+                      <div v-for="item in order.items" :key="item.item_sku" class="item-entry">
+                        <span class="item-name">{{ translateProductName(item.item_name) }}</span>
+                        <span class="item-meta">{{ item.item_sku }} · {{ item.quantity }} @ {{ formatSubmittedCurrency(item.unit_cost) }}</span>
+                      </div>
+                    </div>
+                  </details>
+                </td>
+                <td><strong>{{ formatSubmittedCurrency(order.total_cost) }}</strong></td>
+                <td>{{ order.delivery_lead_time_days }} days</td>
+                <td>{{ formatDate(order.expected_delivery_date) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="stats-grid">
         <div class="stat-card success">
           <div class="stat-label">{{ t('status.delivered') }}</div>
@@ -83,6 +130,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { formatCurrencyWithDecimals } from '../utils/currency'
 
 export default {
   name: 'Orders',
@@ -95,6 +143,9 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     const orders = ref([])
+    const submittedOrders = ref([])
+    const submittedOrdersLoading = ref(true)
+    const submittedOrdersError = ref(null)
 
     // Use shared filters
     const {
@@ -121,6 +172,18 @@ export default {
         error.value = 'Failed to load orders: ' + err.message
       } finally {
         loading.value = false
+      }
+    }
+
+    const loadSubmittedOrders = async () => {
+      try {
+        submittedOrdersLoading.value = true
+        submittedOrdersError.value = null
+        submittedOrders.value = await api.getRestockingOrders()
+      } catch (err) {
+        submittedOrdersError.value = 'Failed to load submitted orders: ' + err.message
+      } finally {
+        submittedOrdersLoading.value = false
       }
     }
 
@@ -153,16 +216,26 @@ export default {
       })
     }
 
-    onMounted(loadOrders)
+    const formatSubmittedCurrency = (amount) =>
+      formatCurrencyWithDecimals(amount, currentCurrency.value, 2)
+
+    onMounted(() => {
+      loadOrders()
+      loadSubmittedOrders()
+    })
 
     return {
       t,
       loading,
       error,
       orders,
+      submittedOrders,
+      submittedOrdersLoading,
+      submittedOrdersError,
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
+      formatSubmittedCurrency,
       currencySymbol,
       translateProductName,
       translateCustomerName
@@ -172,6 +245,31 @@ export default {
 </script>
 
 <style scoped>
+.submitted-orders-card {
+  margin-bottom: 1.5rem;
+}
+
+.submitted-orders-message {
+  margin: 0;
+  padding: 0.75rem 1rem 1rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.error-text {
+  color: #b91c1c;
+}
+
+.submitted-orders-table {
+  min-width: 760px;
+}
+
+.submitted-orders-table th,
+.submitted-orders-table td {
+  padding: 0.75rem;
+  text-align: left;
+}
+
 /* Fixed table layout to prevent column shifting */
 .orders-table {
   table-layout: fixed;

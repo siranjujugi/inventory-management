@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A visual guide to the Factory Inventory Management System architecture, technology stack, and data flow.">
+  <title>System Architecture | Factory Inventory Management</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172b4d;
+      --muted: #60718a;
+      --line: #dce5ef;
+      --surface: #fff;
+      --canvas: #f4f7fb;
+      --blue: #1769aa;
+      --blue-soft: #eaf4fc;
+      --teal: #087e8b;
+      --teal-soft: #e7f6f6;
+      --violet: #6750a4;
+      --violet-soft: #f1edfb;
+      --amber: #9b6412;
+      --amber-soft: #fff5df;
+      --shadow: 0 12px 32px rgb(23 43 77 / 7%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .page { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+
+    .masthead {
+      padding: 38px 0 27px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(120deg, #f8fbff 0%, #eef5fc 100%);
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 12px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 9px;
+      height: 9px;
+      border-radius: 3px;
+      background: var(--blue);
+      content: "";
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 800px; margin-bottom: 10px; font-size: clamp(30px, 4vw, 44px); line-height: 1.13; letter-spacing: -.035em; }
+    .intro { max-width: 760px; margin: 0; color: var(--muted); font-size: 17px; }
+
+    .page-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .page-nav a {
+      padding: 6px 11px;
+      border: 1px solid #d5e1ed;
+      border-radius: 999px;
+      background: rgb(255 255 255 / 65%);
+      color: #425773;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    main { padding: 28px 0 56px; }
+    section { margin: 0 0 28px; }
+    .section-heading { margin-bottom: 15px; }
+    .section-heading h2 { margin-bottom: 4px; font-size: 22px; letter-spacing: -.02em; }
+    .section-heading p { margin: 0; color: var(--muted); }
+
+    .architecture, .panel, .stack-card, .flow-step {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .architecture { padding: 20px; }
+    .architecture-grid {
+      display: grid;
+      grid-template-columns: 1fr 40px 1.15fr 40px 1fr 40px 1fr;
+      align-items: stretch;
+      gap: 9px;
+    }
+
+    .layer {
+      min-width: 0;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdff;
+    }
+
+    .layer-label {
+      display: block;
+      margin-bottom: 11px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .node {
+      margin: 0 0 8px;
+      padding: 10px 11px;
+      border: 1px solid #cfe1f0;
+      border-radius: 8px;
+      background: var(--blue-soft);
+      color: #17466e;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .node:last-child { margin-bottom: 0; }
+    .node small { display: block; margin-top: 3px; color: #53728e; font-size: 11px; font-weight: 500; }
+    .layer.api .node { border-color: #cce5e5; background: var(--teal-soft); color: #14555b; }
+    .layer.api .node small { color: #527a7e; }
+    .layer.data .node { border-color: #ded6f3; background: var(--violet-soft); color: #51417e; }
+    .layer.data .node small { color: #766d91; }
+    .layer.files .node { border-color: #efdfbb; background: var(--amber-soft); color: #755018; }
+    .layer.files .node small { color: #8e744d; }
+
+    .connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: var(--blue);
+      text-align: center;
+    }
+
+    .connector span { font-size: 10px; line-height: 1.25; }
+    .connector b { font-size: 22px; font-weight: 500; line-height: 1; }
+    .diagram-caption { margin: 16px 2px 0; color: var(--muted); font-size: 12px; }
+
+    .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .flow-step { position: relative; padding: 15px 14px; box-shadow: none; }
+    .step-number {
+      display: inline-grid;
+      width: 23px;
+      height: 23px;
+      margin-bottom: 9px;
+      place-items: center;
+      border-radius: 7px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .flow-step h3 { margin: 0 0 4px; font-size: 13px; }
+    .flow-step p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .split { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; align-items: start; }
+    .panel { padding: 19px; }
+    .panel h3 { margin: 0 0 12px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 9px 8px; border-bottom: 1px solid #edf1f6; vertical-align: top; }
+    th { color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    td { font-size: 12px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td strong { color: #263c59; }
+    .version { color: #728198; white-space: nowrap; }
+
+    .data-list { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }
+    .data-list li { display: grid; grid-template-columns: 105px 1fr; gap: 10px; font-size: 12px; }
+    .data-list strong { color: #263c59; }
+    .data-list span { color: var(--muted); }
+
+    .notice {
+      margin-top: 14px;
+      padding: 12px 13px;
+      border: 1px solid #f0dfb6;
+      border-radius: 9px;
+      background: #fff9eb;
+      color: #76561d;
+      font-size: 12px;
+    }
+
+    .components { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .component { padding: 15px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+    .component .tag { display: inline-block; margin-bottom: 8px; color: var(--blue); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .component h3 { margin: 0 0 5px; font-size: 14px; }
+    .component p { margin: 0; color: var(--muted); font-size: 12px; }
+    .endpoint-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    code { padding: 3px 6px; border-radius: 5px; background: #f0f4f8; color: #3b526d; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    footer { padding: 18px 0 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+
+    @media (max-width: 850px) {
+      .architecture-grid { grid-template-columns: 1fr; }
+      .connector { min-height: 32px; flex-direction: row; }
+      .connector b { transform: rotate(90deg); }
+      .flow { grid-template-columns: repeat(2, 1fr); }
+      .flow-step:last-child { grid-column: span 2; }
+      .split { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .page { width: min(100% - 26px, 1120px); }
+      .masthead { padding-top: 27px; }
+      .architecture, .panel { padding: 14px; }
+      .flow, .components { grid-template-columns: 1fr; }
+      .flow-step:last-child { grid-column: auto; }
+      .data-list li { grid-template-columns: 90px 1fr; }
+      table { min-width: 540px; }
+      .table-scroll { overflow-x: auto; }
+    }
+
+    @media print {
+      body { background: white; }
+      .masthead { padding-top: 10px; }
+      .page { width: 100%; }
+      .architecture, .panel, .stack-card, .flow-step { box-shadow: none; }
+      .page-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="page">
+      <p class="eyebrow">System guide</p>
+      <h1>Factory Inventory Management</h1>
+      <p class="intro">A visual guide to how the Vue frontend, FastAPI service, and local demo datasets fit together - from a filter selection to the data shown on screen.</p>
+      <nav class="page-nav" aria-label="Page sections">
+        <a href="#architecture">Architecture</a>
+        <a href="#data-flow">Data flow</a>
+        <a href="#stack">Technology stack</a>
+        <a href="#components">Components and API</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section id="architecture">
+      <div class="section-heading">
+        <h2>System architecture</h2>
+        <p>A small two-process web app. The browser handles presentation and derived UI state; the API filters and validates data held in server memory.</p>
+      </div>
+      <div class="architecture" role="img" aria-label="Browser and Vue user interface call the Axios API client, which sends HTTP requests to FastAPI. FastAPI validates responses and reads in-memory datasets loaded from JSON files at startup.">
+        <div class="architecture-grid">
+          <div class="layer">
+            <span class="layer-label">Presentation</span>
+            <div class="node">Browser UI<small>Dashboard, inventory, orders, reports</small></div>
+            <div class="node">Vue 3 application<small>Vue Router + reactive views</small></div>
+            <div class="node">Shared filter state<small>Period, warehouse, category, status</small></div>
+          </div>
+          <div class="connector" aria-hidden="true"><span>client calls</span><b>→</b></div>
+          <div class="layer api">
+            <span class="layer-label">HTTP client</span>
+            <div class="node">Axios API module<small>localhost:8001/api</small></div>
+            <div class="node">Query parameters<small>Filters sent with relevant requests</small></div>
+          </div>
+          <div class="connector" aria-hidden="true"><span>HTTP / JSON</span><b>→</b></div>
+          <div class="layer api">
+            <span class="layer-label">Service</span>
+            <div class="node">FastAPI<small>localhost:8001 · Uvicorn</small></div>
+            <div class="node">Filtering + calculations<small>Python helpers and endpoint logic</small></div>
+            <div class="node">Pydantic models<small>Typed response validation</small></div>
+          </div>
+          <div class="connector" aria-hidden="true"><span>loads at startup</span><b>←</b></div>
+          <div class="layer files">
+            <span class="layer-label">Data</span>
+            <div class="node">JSON seed files<small>server/data/*.json</small></div>
+            <div class="node">In-memory lists<small>Loaded by mock_data.py</small></div>
+            <div class="node">No database<small>Runtime changes are not durable</small></div>
+          </div>
+        </div>
+        <p class="diagram-caption">The browser and API run as separate local development servers. The backend loads the JSON files when its Python module starts; it does not query a database.</p>
+      </div>
+    </section>
+
+    <section id="data-flow">
+      <div class="section-heading">
+        <h2>Data flow</h2>
+        <p>Example: changing a shared filter updates the page by fetching a filtered response and deriving display values.</p>
+      </div>
+      <div class="flow">
+        <article class="flow-step">
+          <span class="step-number">1</span>
+          <h3>User changes a filter</h3>
+          <p>FilterBar updates shared reactive state from useFilters().</p>
+        </article>
+        <article class="flow-step">
+          <span class="step-number">2</span>
+          <h3>View requests data</h3>
+          <p>A page watcher passes current selections to the API client.</p>
+        </article>
+        <article class="flow-step">
+          <span class="step-number">3</span>
+          <h3>FastAPI filters records</h3>
+          <p>Endpoints apply warehouse, category, status, or date filters.</p>
+        </article>
+        <article class="flow-step">
+          <span class="step-number">4</span>
+          <h3>Response is validated</h3>
+          <p>Pydantic response models validate typed inventory and order data.</p>
+        </article>
+        <article class="flow-step">
+          <span class="step-number">5</span>
+          <h3>UI renders results</h3>
+          <p>Vue refs hold responses; computed properties derive tables and charts.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="stack">
+      <div class="section-heading">
+        <h2>Technology stack and data</h2>
+        <p>Versions below are the declared package or runtime constraints, not necessarily the versions installed on a particular machine.</p>
+      </div>
+      <div class="split">
+        <div class="panel">
+          <h3>Technology stack</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Layer</th><th>Technology</th><th>Declared version</th><th>Purpose</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>Frontend</strong></td><td>Vue 3</td><td class="version">^3.4.21</td><td>Component UI and reactive state</td></tr>
+                <tr><td><strong>Build</strong></td><td>Vite</td><td class="version">^8.0.0</td><td>Development server and production build</td></tr>
+                <tr><td><strong>Routing</strong></td><td>Vue Router</td><td class="version">^4.3.0</td><td>Client-side page navigation</td></tr>
+                <tr><td><strong>HTTP</strong></td><td>Axios</td><td class="version">^1.6.7</td><td>Browser requests to the API</td></tr>
+                <tr><td><strong>Backend</strong></td><td>Python</td><td class="version">&gt;=3.11</td><td>API runtime</td></tr>
+                <tr><td><strong>API</strong></td><td>FastAPI</td><td class="version">&gt;=0.110.0</td><td>HTTP endpoints and OpenAPI docs</td></tr>
+                <tr><td><strong>Validation</strong></td><td>Pydantic</td><td class="version">&gt;=2.5.0</td><td>Request and response data models</td></tr>
+                <tr><td><strong>Server</strong></td><td>Uvicorn</td><td class="version">&gt;=0.24.0</td><td>ASGI server on port 8001</td></tr>
+                <tr><td><strong>Data</strong></td><td>JSON + Python lists</td><td class="version">Local demo data</td><td>Seed datasets loaded into memory</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <aside class="panel">
+          <h3>Data storage and boundaries</h3>
+          <ul class="data-list">
+            <li><strong>Seed data</strong><span>Inventory, orders, forecasts, backlog, spending, transactions, and purchase-order JSON files live in server/data/.</span></li>
+            <li><strong>At startup</strong><span>server/mock_data.py reads the files into module-level Python lists and values.</span></li>
+            <li><strong>At runtime</strong><span>Filtering and summaries run in Python against those in-memory objects; there is no database, cache, or message broker.</span></li>
+            <li><strong>Persistence</strong><span>In-memory edits are lost on restart. The seed JSON files are the durable demo inputs.</span></li>
+            <li><strong>External APIs</strong><span>None are required for the core inventory, orders, dashboard, demand, backlog, spending, and report flows.</span></li>
+          </ul>
+          <div class="notice"><strong>Demo boundary:</strong> client-side profile/auth is mocked, and the backend CORS policy currently allows all origins. Treat the app as a local demo, not a production deployment.</div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="components">
+      <div class="section-heading">
+        <h2>Components and API surface</h2>
+        <p>Responsibilities are intentionally direct: views own page loading and display state, while the API module centralizes most HTTP calls.</p>
+      </div>
+      <div class="components">
+        <article class="component">
+          <span class="tag">Frontend shell</span>
+          <h3>App.vue + Vue Router</h3>
+          <p>Provides navigation, shared filters, profile/task UI, and the active route view. Routes are registered in main.js.</p>
+        </article>
+        <article class="component">
+          <span class="tag">Shared state</span>
+          <h3>Composables</h3>
+          <p>useFilters shares reactive filters; useI18n handles locale and currency; useAuth provides mock profile state.</p>
+        </article>
+        <article class="component">
+          <span class="tag">Pages</span>
+          <h3>Views and components</h3>
+          <p>Dashboard, Inventory, Orders, Demand, Spending, Backlog, and Reports present data with modals and custom chart UI.</p>
+        </article>
+        <article class="component">
+          <span class="tag">Browser data access</span>
+          <h3>client/src/api.js</h3>
+          <p>Uses Axios at the fixed local API base URL. Reports.vue currently calls the report endpoints directly with Axios.</p>
+        </article>
+        <article class="component">
+          <span class="tag">Backend</span>
+          <h3>server/main.py</h3>
+          <p>Defines REST handlers, shared filters, summary/report calculations, Pydantic models, and development CORS middleware.</p>
+          <div class="endpoint-list">
+            <code>/api/inventory</code><code>/api/orders</code><code>/api/dashboard/summary</code>
+            <code>/api/demand</code><code>/api/backlog</code><code>/api/spending/*</code><code>/api/reports/*</code>
+          </div>
+        </article>
+        <article class="component">
+          <span class="tag">Data loading</span>
+          <h3>mock_data.py + server/data</h3>
+          <p>Loads static JSON into memory during backend startup. Endpoints return data or calculate filtered/aggregated results from it.</p>
+        </article>
+      </div>
+      <div class="notice"><strong>Implementation note:</strong> client/src/api.js also defines task and purchase-order requests, but matching handlers are not currently defined in server/main.py. Those calls are outside the working API surface shown above.</div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="page">Architecture summary based on the current repository source and dependency manifests. Local development defaults: frontend on port 3000, API on port 8001.</div>
+  </footer>
+</body>
+</html>
